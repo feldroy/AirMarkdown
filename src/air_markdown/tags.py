@@ -5,6 +5,7 @@ import html
 
 import air
 import mistletoe
+from air.tags import BaseTag
 from mistletoe import block_token
 from mistletoe.html_renderer import HtmlRenderer
 
@@ -59,8 +60,12 @@ class Markdown(air.Tag):
         """
         return content
 
-    def render(self) -> str:
-        """Render the string with the Markdown library."""
+    def _render(self) -> str:
+        """Render the string with the Markdown library.
+
+        Note: We override _render() rather than render() because Air 0.25+
+        renders child tags via __str__ -> html property -> _render().
+        """
         content = self._children[0] if self._children else ""
         return self.wrapper(mistletoe.markdown(content, self.html_renderer))
 
@@ -100,7 +105,7 @@ class AirHTMLRenderer(HtmlRenderer):
                         expr_obj = compile(ast.Expression(body=node.value), "<string>", "eval")
                         # Ensure local_scope is passed to eval
                         result = eval(expr_obj, globals(), local_scope)
-                        if isinstance(result, air.Tag):
+                        if isinstance(result, BaseTag):
                             rendered_parts.append(result.render())
                     else:
                         # Execute other statements (imports, assignments, etc.)
