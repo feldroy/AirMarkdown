@@ -1,5 +1,6 @@
 """Tests for `air_markdown` package."""
 
+import air
 import mistletoe
 
 from air_markdown import Markdown, TailwindTypographyMarkdown
@@ -53,9 +54,12 @@ def test_custom_html_renderer():
 
 
 def test_custom_wrapper_dynamic_assignment():
-    Markdown.wrapper = lambda self, x: f"<section>{x}</section>"  # type: ignore
-
-    assert Markdown("# Big").render() == "<section><h1>Big</h1>\n</section>"
+    original_wrapper = Markdown.wrapper
+    try:
+        Markdown.wrapper = lambda self, x: f"<section>{x}</section>"  # type: ignore
+        assert Markdown("# Big").render() == "<section><h1>Big</h1>\n</section>"
+    finally:
+        Markdown.wrapper = original_wrapper
 
 
 def test_TailwindTypographyMarkdown():
@@ -184,3 +188,25 @@ air.P(content)
         '<article class="prose"><h1>Multiple Tags with Logic</h1>\n<h1>My Title</h1>\n<p>Some content.</p>\n</article>'
     )
     assert html == expected_html
+
+
+def test_markdown_as_child_of_div():
+    """Test that Markdown renders correctly when used as a child of another tag.
+
+    This tests the fix for Air 0.25+ where child tags are rendered via
+    __str__ -> html property -> _render() rather than render().
+    """
+    div = air.Div(Markdown("# Hello"))
+    html = div.render()
+    assert html == "<div><h1>Hello</h1>\n</div>"
+
+
+def test_markdown_nested_in_layout():
+    """Test Markdown inside a more complex tag structure."""
+    layout = air.Main(
+        air.Header(air.H1("Site Title")),
+        air.Article(Markdown("## Article\n\nSome content.")),
+    )
+    html = layout.render()
+    assert "<h2>Article</h2>" in html
+    assert "<p>Some content.</p>" in html
